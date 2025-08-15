@@ -374,4 +374,126 @@ If you want, I can **upgrade this** so it also:
 
 That would make it a **complete bug bounty recon bot** 🚀
 Do you want me to build that upgraded version?
+Alright — let’s make this **properly wrapped** into a **single Bash script** where you just run:
+
+```bash
+./recon.sh target.com
+```
+
+…and it will do **full automation** from **subdomain enumeration → live probing → screenshots → reports** in one shot.
+
+I’ll also make sure it’s **tidy** and all outputs go to `/out/<domain>/` 📂.
+
+---
+
+## **🔗 Full Automated Recon Script**
+
+```bash
+#!/bin/bash
+
+# 🚀 FULL AUTOMATED RECON SCRIPT
+# Author: ChatGPT Recon Edition 😎
+# Purpose: Bug bounty recon automation
+# Usage: ./recon.sh example.com
+
+# 🎯 Target
+DOMAIN=$1
+if [ -z "$DOMAIN" ]; then
+    echo "Usage: $0 <domain>"
+    exit 1
+fi
+
+# 📂 Output folder
+OUT_DIR="out/$DOMAIN"
+mkdir -p "$OUT_DIR/screenshots"
+
+# 🛠 Check for required tools
+TOOLS=("assetfinder" "subfinder" "amass" "httprobe" "httpx" "aquatone")
+for t in "${TOOLS[@]}"; do
+    if ! command -v $t &> /dev/null; then
+        echo "❌ Tool not found: $t"
+        echo "   Install it before running this script."
+        exit 1
+    fi
+done
+
+echo "🔍 Starting recon for: $DOMAIN"
+echo "📂 Results will be saved in: $OUT_DIR"
+
+# 🌐 1. Subdomain Enumeration
+echo "📡 Enumerating subdomains..."
+assetfinder --subs-only "$DOMAIN" > "$OUT_DIR/assetfinder.txt"
+subfinder -d "$DOMAIN" -silent > "$OUT_DIR/subfinder.txt"
+amass enum -passive -d "$DOMAIN" -o "$OUT_DIR/amass.txt"
+
+# 📦 Merge & deduplicate
+cat "$OUT_DIR"/assetfinder.txt "$OUT_DIR"/subfinder.txt "$OUT_DIR"/amass.txt | sort -u > "$OUT_DIR/all_subdomains.txt"
+echo "✅ Total unique subdomains: $(wc -l < "$OUT_DIR/all_subdomains.txt")"
+
+# 🟢 2. Check Live Hosts
+echo "🌟 Probing for live hosts..."
+cat "$OUT_DIR/all_subdomains.txt" | httprobe -c 50 | sort -u > "$OUT_DIR/live_hosts.txt"
+echo "✅ Live hosts found: $(wc -l < "$OUT_DIR/live_hosts.txt")"
+
+# 🏷 3. Grab Titles & Status Codes
+echo "📝 Collecting HTTP titles and status codes..."
+httpx -l "$OUT_DIR/live_hosts.txt" -status-code -title -silent -o "$OUT_DIR/httpx_report.txt"
+
+# 📊 4. Save as CSV
+echo "URL,Status,Title" > "$OUT_DIR/report.csv"
+awk -F'\\[|\\]' '{print $1","$2","$3}' "$OUT_DIR/httpx_report.txt" >> "$OUT_DIR/report.csv"
+
+# 📸 5. Take Screenshots
+echo "📸 Taking screenshots..."
+cat "$OUT_DIR/live_hosts.txt" | aquatone -out "$OUT_DIR/screenshots" -silent
+
+# 📄 6. Create HTML report
+echo "<html><body><h1>Recon Report for $DOMAIN</h1><pre>" > "$OUT_DIR/report.html"
+cat "$OUT_DIR/httpx_report.txt" >> "$OUT_DIR/report.html"
+echo "</pre></body></html>" >> "$OUT_DIR/report.html"
+
+echo "🎯 Recon completed!"
+echo "📂 All results saved in: $OUT_DIR"
+```
+
+---
+
+## **⚡ Features**
+
+* **Single Command** → `./recon.sh example.com`
+* Finds subdomains via:
+
+  * `assetfinder`
+  * `subfinder`
+  * `amass`
+* Checks for **live hosts** with `httprobe`
+* Gets **status codes + titles** with `httpx`
+* **CSV + HTML reports** generated
+* **Screenshots** taken with `aquatone`
+
+---
+
+## **📌 Installation of Tools**
+
+If you don’t have the tools:
+
+```bash
+go install github.com/tomnomnom/assetfinder@latest
+go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install github.com/OWASP/Amass/v3/...@latest
+go install github.com/tomnomnom/httprobe@latest
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install github.com/michenriksen/aquatone@latest
+```
+
+---
+
+I can **upgrade this** to also:
+
+* Run **Nuclei** for vulnerability scanning 🛡
+* Use **gau / waybackurls** to fetch archived endpoints 🕵
+* Extract API keys & secrets from JS files automatically 🔑
+
+If you want, I can make that **"Bug Bounty All-in-One Recon Bot"** version next.
+Do you want me to prepare it?
 
