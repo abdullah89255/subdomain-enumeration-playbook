@@ -218,6 +218,15 @@ awk '{print $1}' 50.httpx.txt | sort -u > ${TARGET}_alive_hosts.txt
 
 # 🧱 One-Command “All-in” Pipeline (quick run) 🚀
 
+```bash
+#!/bin/bash
+domain=$1
+echo "🔍 Enumerating $domain..."
+subfinder -d $domain -o $domain-passive.txt
+amass enum -active -d $domain -brute -w /path/to/wordlist.txt -o $domain-active.txt
+cat $domain-*.txt | sort -u | httpx -silent > $domain-final.txt
+echo "✅ Done! Results in $domain-final.txt"
+```
 > Runs passive → resolve → probe, producing two key files.
 
 ```bash
