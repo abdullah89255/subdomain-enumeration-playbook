@@ -268,4 +268,101 @@ awk '{print $1}' 50.httpx.txt | sort -u > ${TARGET}_alive_hosts.txt
 
 ---
 
+Got it ✅ — I’ll give you a **single Bash script** that will:
+
+* Take a target domain as input 🖊
+* Enumerate subdomains 🌐
+* Probe for live hosts 🟢
+* Grab HTTP titles + status codes 🏷
+* Take screenshots 📸
+* Save **CSV + HTML reports** neatly into `/out` 📂
+
+---
+
+## **📜 Automated Subdomain Enumeration Script**
+
+```bash
+#!/bin/bash
+
+# 🚀 Automated Subdomain Enumeration + Recon
+# Requirements: assetfinder, subfinder, amass, httprobe, httpx, aquatone, csvkit
+# Install missing tools with: go install github.com/tomnomnom/assetfinder@latest ...etc
+
+DOMAIN=$1
+
+if [ -z "$DOMAIN" ]; then
+    echo "Usage: $0 example.com"
+    exit 1
+fi
+
+# 📂 Output folder
+OUTDIR="out_$DOMAIN"
+mkdir -p "$OUTDIR"
+
+echo "🔍 Enumerating subdomains for $DOMAIN..."
+
+# 🌐 Gather subdomains
+assetfinder --subs-only "$DOMAIN" > "$OUTDIR/subs_assetfinder.txt"
+subfinder -d "$DOMAIN" -silent > "$OUTDIR/subs_subfinder.txt"
+amass enum -passive -d "$DOMAIN" -o "$OUTDIR/subs_amass.txt"
+
+# 📦 Merge & deduplicate
+cat "$OUTDIR"/subs_*.txt | sort -u > "$OUTDIR/all_subs.txt"
+echo "✅ Found $(wc -l < "$OUTDIR/all_subs.txt") unique subdomains"
+
+# 🟢 Probe for live hosts
+cat "$OUTDIR/all_subs.txt" | httprobe -c 50 > "$OUTDIR/live_hosts.txt"
+echo "🌟 Live hosts: $(wc -l < "$OUTDIR/live_hosts.txt")"
+
+# 🏷 Grab status codes + titles
+httpx -l "$OUTDIR/live_hosts.txt" -status-code -title -o "$OUTDIR/httpx_report.txt"
+
+# 📊 Convert to CSV
+echo "URL,Status,Title" > "$OUTDIR/report.csv"
+cat "$OUTDIR/httpx_report.txt" | sed 's/\ \[/:/' | awk -F':' '{print $1","$2","$3}' >> "$OUTDIR/report.csv"
+
+# 📸 Take screenshots
+cat "$OUTDIR/live_hosts.txt" | aquatone -out "$OUTDIR/screenshots" -silent
+
+# 📝 Make HTML report
+echo "<html><body><h1>Recon Report for $DOMAIN</h1><pre>" > "$OUTDIR/report.html"
+cat "$OUTDIR/httpx_report.txt" >> "$OUTDIR/report.html"
+echo "</pre></body></html>" >> "$OUTDIR/report.html"
+
+echo "🎯 Done! Reports & screenshots saved in: $OUTDIR"
+```
+
+---
+
+## **⚡ Tools Used**
+
+| Step                | Tool                                | Purpose                            |
+| ------------------- | ----------------------------------- | ---------------------------------- |
+| Subdomain Discovery | `assetfinder`, `subfinder`, `amass` | Find as many subs as possible      |
+| Live Check          | `httprobe`, `httpx`                 | Detect running HTTP/HTTPS services |
+| Reporting           | `csvkit` (optional)                 | Create CSV outputs                 |
+| Screenshots         | `aquatone`                          | Capture site previews              |
+
+---
+
+## **💡 Usage**
+
+```bash
+chmod +x recon.sh
+./recon.sh example.com
+```
+
+* Results will be in `/out_example.com/` folder
+* CSV + HTML + screenshots all tidy 📂
+
+---
+
+If you want, I can **upgrade this** so it also:
+
+* Runs **nuclei** for vuln scanning ⚠
+* Runs **gau/waybackurls** for JS & endpoint collection 📜
+* Auto-extracts API keys/secrets 🔑
+
+That would make it a **complete bug bounty recon bot** 🚀
+Do you want me to build that upgraded version?
 
